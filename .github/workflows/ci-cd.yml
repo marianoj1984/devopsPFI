@@ -38,6 +38,9 @@ jobs:
         with:
           dotnet-version: 3.1.x
 
+      - name: Verificar versión Ubuntu
+        run: lsb_release -a
+  
       - name: Restaurar dependencias
         run: dotnet restore
 

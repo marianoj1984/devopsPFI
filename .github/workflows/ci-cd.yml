@@ -28,31 +28,23 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v3
 
-      - name: Instalar libssl1.1 manualmente
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget
-          wget http://security.ubuntu.com/ubuntu/pool/main/o/openssl1.1/libssl1.1_1.1.1f-1ubuntu2.16_amd64.deb
-          sudo dpkg -i libssl1.1_1.1.1f-1ubuntu2.16_amd64.deb || sudo apt-get install -f -y
-
-
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 3.1.x
 
       - name: Restaurar dependencias
-        run: dotnet restore ./tecni-devops
+        run: dotnet restore
 
       - name: Compilar
-        run: dotnet build ./tecni-devops --no-restore
+        run: dotnet build --no-restore
 
       - name: Ejecutar tests
-        run: dotnet test ./tecni-devops.Tests --no-build --verbosity normal
+        run: dotnet test --no-build --verbosity normal
 
   docker:
     needs: build-test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Checkout código
@@ -64,9 +56,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build y push de imagen Docker
+      - name: Build y push de imagen
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/tecni-devops:latest ./tecni-devops
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/tecni-devops:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/tecni-devops:latest
-
-

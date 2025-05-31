@@ -1,0 +1,18 @@
+# Etapa 1: build
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build
+WORKDIR /src
+
+COPY *.sln .
+COPY tecni-devops/tecni-devops.csproj tecni-devops/
+RUN dotnet restore
+
+COPY . .
+WORKDIR /src/tecni-devops
+RUN dotnet publish -c Release -o /app
+
+# Etapa 2: runtime
+FROM mcr.microsoft.com/dotnet/core/aspnet:3.1
+WORKDIR /app
+COPY --from=build /app .
+
+ENTRYPOINT ["dotnet", "tecni-devops.dll"]

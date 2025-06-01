@@ -66,5 +66,5 @@ jobs:
 
       - name: Build y push de imagen
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/tecni-devops:latest .
+          docker build -f tecni-devops/Dockerfile -t ${{ secrets.DOCKER_USERNAME }}/tecni-devops:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/tecni-devops:latest

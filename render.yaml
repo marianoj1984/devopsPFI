@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: tecni-devops
+    env: docker
+    plan: free
+    region: oregon
+    branch: master
+    dockerfilePath: ./tecni-devops/Dockerfile
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Default
+        value: Server=host.docker.internal;Port=3308;Database=tododb;Uid=root;Pwd=root;

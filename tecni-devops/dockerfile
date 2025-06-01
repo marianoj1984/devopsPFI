@@ -4,6 +4,7 @@ WORKDIR /src
 
 COPY *.sln .
 COPY tecni-devops/tecni-devops.csproj tecni-devops/
+COPY TecniDevOps.Tests/TecniDevOps.Tests.csproj TecniDevOps.Tests/
 RUN dotnet restore
 
 COPY . .

@@ -1,0 +1,23 @@
+﻿@model ToDoItem
+
+@{
+    ViewData["Title"] = "Editar ToDo";
+}
+
+<h2>Editar ToDo</h2>
+
+<form asp-action="Update" method="post">
+    <input type="hidden" asp-for="Id" />
+
+    <div>
+        <label>Título:</label>
+        <input asp-for="Titulo" />
+    </div>
+    <div>
+        <label>Completado:</label>
+        <input asp-for="EstaCompleto" type="checkbox" />
+    </div>
+    <button type="submit">Actualizar</button>
+</form>
+
+<a href="/ToDoItem">Volver</a>

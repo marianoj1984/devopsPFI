@@ -1,8 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using tecni_devops.Models;
 
 namespace tecni_devops.Controllers
@@ -16,38 +13,80 @@ namespace tecni_devops.Controllers
             _context = context;
         }
 
-        [HttpGet]
-        public IActionResult GetAll() => Ok(_context.ToDoItems.ToList());
+        // GET: /ToDoItem
+        public IActionResult Index()
+        {
+            var items = _context.ToDoItems.ToList();
+            return View(items);
+        }
 
+        // GET: /ToDoItem/Create
+        public IActionResult Create()
+        {
+            return View();
+        }
+
+        // POST: /ToDoItem/Create
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Create(ToDoItem item)
         {
-            _context.ToDoItems.Add(item);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetAll), new { id = item.Id }, item);
+            if (ModelState.IsValid)
+            {
+                _context.ToDoItems.Add(item);
+                _context.SaveChanges();
+                return RedirectToAction(nameof(Index));
+            }
+            return View(item);
         }
 
-        [HttpPut("{id}")]
-        public IActionResult Update(int id, ToDoItem item)
+        // GET: /ToDoItem/Update/{id}
+        public IActionResult Update(int id)
         {
-            var existing = _context.ToDoItems.Find(id);
-            if (existing == null) return NotFound();
-
-            existing.Titulo = item.Titulo;
-            existing.EstaCompleto = item.EstaCompleto;
-            _context.SaveChanges();
-            return NoContent();
+            var item = _context.ToDoItems.Find(id);
+            if (item == null) return NotFound();
+            return View(item);
         }
 
-        [HttpDelete("{id}")]
+        // POST: /ToDoItem/Update/{id}
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Update(ToDoItem item)
+        {
+            if (ModelState.IsValid)
+            {
+                var existing = _context.ToDoItems.Find(item.Id);
+                if (existing == null) return NotFound();
+
+                existing.Titulo = item.Titulo;
+                existing.EstaCompleto = item.EstaCompleto;
+                _context.SaveChanges();
+
+                return RedirectToAction(nameof(Index));
+            }
+            return View(item);
+        }
+
+        // GET: /ToDoItem/Delete/{id}
         public IActionResult Delete(int id)
+        {
+            var item = _context.ToDoItems.Find(id);
+            if (item == null) return NotFound();
+            return View(item);
+        }
+
+        // POST: /ToDoItem/Delete/{id}
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult DeleteConfirmed(int id)
         {
             var item = _context.ToDoItems.Find(id);
             if (item == null) return NotFound();
 
             _context.ToDoItems.Remove(item);
             _context.SaveChanges();
-            return NoContent();
+
+            return RedirectToAction(nameof(Index));
         }
     }
 }

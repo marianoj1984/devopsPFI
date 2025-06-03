@@ -1,0 +1,32 @@
+﻿@model IEnumerable<ToDoItem>
+
+@{
+    ViewData["Title"] = "ToDo List";
+}
+
+<h2>ToDo List</h2>
+
+<a href="/ToDoItem/Create">Crear nuevo</a>
+
+<table>
+    <thead>
+        <tr>
+            <th>Título</th>
+            <th>Completado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Titulo</td>
+                <td>@item.EstaCompleto</td>
+                <td>
+                    <a href="/ToDoItem/Update/@item.Id">Editar</a> |
+                    <a href="/ToDoItem/Delete/@item.Id">Eliminar</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

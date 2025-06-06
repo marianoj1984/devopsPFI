@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using tecni_devops;
 using tecni_devops.Controllers;
@@ -13,99 +15,179 @@ namespace TecniDevOps.Tests
         private AppDbContext GetDbContext(string dbName)
         {
             var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(databaseName: dbName) // un nombre distinto para cada test
+                .UseInMemoryDatabase(databaseName: dbName)
                 .Options;
 
-            var context = new AppDbContext(options);
-            return context;
+            return new AppDbContext(options);
         }
 
         [Fact]
-        public void GetAll_ReturnsAllItems()
+        public void Index_ReturnsAllItems()
         {
-            var context = GetDbContext("GetAllDB");
-            context.ToDoItems.Add(new ToDoItem { Titulo = "Item 1", EstaCompleto = false });
-            context.ToDoItems.Add(new ToDoItem { Titulo = "Item 2", EstaCompleto = true });
+            var context = GetDbContext("IndexDB");
+            context.ToDoItems.AddRange(
+                new ToDoItem { Titulo = "Uno", EstaCompleto = false },
+                new ToDoItem { Titulo = "Dos", EstaCompleto = true }
+            );
             context.SaveChanges();
 
             var controller = new ToDoItemController(context);
+            var result = controller.Index() as ViewResult;
 
-            var result = controller.GetAll() as OkObjectResult;
-            var items = Assert.IsAssignableFrom<System.Collections.Generic.List<ToDoItem>>(result.Value);
-
-            Assert.Equal(2, items.Count);
+            Assert.NotNull(result);
+            var model = Assert.IsAssignableFrom<List<ToDoItem>>(result.Model);
+            Assert.Equal(2, model.Count);
         }
 
         [Fact]
-        public void Create_AddsItem_ReturnsCreated()
+        public void Create_Get_ReturnsView()
         {
-            var context = GetDbContext("CreateDB");
-            var controller = new ToDoItemController(context);
+            var controller = new ToDoItemController(GetDbContext("CreateGetDB"));
+            var result = controller.Create();
+            Assert.IsType<ViewResult>(result);
+        }
 
-            var newItem = new ToDoItem { Titulo = "Nuevo item", EstaCompleto = false };
-            var result = controller.Create(newItem) as CreatedAtActionResult;
+        [Fact]
+        public void Create_Post_ValidItem_RedirectsToIndex()
+        {
+            var context = GetDbContext("CreatePostValidDB");
+            var controller = new ToDoItemController(context);
+            var item = new ToDoItem { Titulo = "Nuevo", EstaCompleto = false };
+
+            var result = controller.Create(item) as RedirectToActionResult;
 
             Assert.NotNull(result);
-            var item = result.Value as ToDoItem;
-            Assert.Equal("Nuevo item", item.Titulo);
+            Assert.Equal("Index", result.ActionName);
             Assert.Single(context.ToDoItems);
         }
 
         [Fact]
-        public void Update_ModifiesItem_ReturnsNoContent()
+        public void Create_Post_InvalidModel_ReturnsViewWithItem()
         {
-            var context = GetDbContext("UpdateDB");
+            var context = GetDbContext("CreatePostInvalidDB");
+            var controller = new ToDoItemController(context);
+            controller.ModelState.AddModelError("Titulo", "Required");
+
+            var item = new ToDoItem();
+            var result = controller.Create(item) as ViewResult;
+
+            Assert.NotNull(result);
+            Assert.Equal(item, result.Model);
+        }
+
+        [Fact]
+        public void Update_Get_ExistingItem_ReturnsViewWithItem()
+        {
+            var context = GetDbContext("UpdateGetExistsDB");
+            var item = new ToDoItem { Titulo = "Edit", EstaCompleto = false };
+            context.ToDoItems.Add(item);
+            context.SaveChanges();
+
+            var controller = new ToDoItemController(context);
+            var result = controller.Update(item.Id) as ViewResult;
+
+            Assert.NotNull(result);
+            Assert.Equal(item.Id, ((ToDoItem)result.Model).Id);
+        }
+
+        [Fact]
+        public void Update_Get_NonExistingItem_ReturnsNotFound()
+        {
+            var controller = new ToDoItemController(GetDbContext("UpdateGetNotFoundDB"));
+            var result = controller.Update(999);
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public void Update_Post_ExistingItem_RedirectsToIndex()
+        {
+            var context = GetDbContext("UpdatePostExistsDB");
             var item = new ToDoItem { Titulo = "Viejo", EstaCompleto = false };
             context.ToDoItems.Add(item);
             context.SaveChanges();
 
             var controller = new ToDoItemController(context);
+            var updated = new ToDoItem { Id = item.Id, Titulo = "Nuevo", EstaCompleto = true };
 
-            var update = new ToDoItem { Titulo = "Nuevo", EstaCompleto = true };
-            var result = controller.Update(item.Id, update) as NoContentResult;
+            var result = controller.Update(updated) as RedirectToActionResult;
 
             Assert.NotNull(result);
-            var updatedItem = context.ToDoItems.Find(item.Id);
-            Assert.Equal("Nuevo", updatedItem.Titulo);
-            Assert.True(updatedItem.EstaCompleto);
+            Assert.Equal("Index", result.ActionName);
+
+            var dbItem = context.ToDoItems.Find(item.Id);
+            Assert.Equal("Nuevo", dbItem.Titulo);
+            Assert.True(dbItem.EstaCompleto);
         }
 
         [Fact]
-        public void Update_NonExistentItem_ReturnsNotFound()
+        public void Update_Post_NonExistingItem_ReturnsNotFound()
         {
-            var context = GetDbContext("UpdateFailDB");
-            var controller = new ToDoItemController(context);
-
-            var update = new ToDoItem { Titulo = "Algo", EstaCompleto = true };
-            var result = controller.Update(999, update);
-
+            var controller = new ToDoItemController(GetDbContext("UpdatePostNotFoundDB"));
+            var item = new ToDoItem { Id = 999, Titulo = "Algo", EstaCompleto = true };
+            var result = controller.Update(item);
             Assert.IsType<NotFoundResult>(result);
         }
 
         [Fact]
-        public void Delete_RemovesItem_ReturnsNoContent()
+        public void Update_Post_InvalidModel_ReturnsViewWithItem()
         {
-            var context = GetDbContext("DeleteDB");
-            var item = new ToDoItem { Titulo = "Para borrar", EstaCompleto = false };
+            var controller = new ToDoItemController(GetDbContext("UpdatePostInvalidDB"));
+            controller.ModelState.AddModelError("Titulo", "Required");
+
+            var item = new ToDoItem();
+            var result = controller.Update(item) as ViewResult;
+
+            Assert.NotNull(result);
+            Assert.Equal(item, result.Model);
+        }
+
+        [Fact]
+        public void Delete_Get_ExistingItem_ReturnsViewWithItem()
+        {
+            var context = GetDbContext("DeleteGetExistsDB");
+            var item = new ToDoItem { Titulo = "Borrar", EstaCompleto = false };
             context.ToDoItems.Add(item);
             context.SaveChanges();
 
             var controller = new ToDoItemController(context);
-            var result = controller.Delete(item.Id);
+            var result = controller.Delete(item.Id) as ViewResult;
 
-            Assert.IsType<NoContentResult>(result);
-            Assert.Empty(context.ToDoItems);
+            Assert.NotNull(result);
+            Assert.Equal(item.Id, ((ToDoItem)result.Model).Id);
         }
 
         [Fact]
-        public void Delete_NonExistentItem_ReturnsNotFound()
+        public void Delete_Get_NonExistingItem_ReturnsNotFound()
         {
-            var context = GetDbContext("DeleteFailDB");
+            var controller = new ToDoItemController(GetDbContext("DeleteGetNotFoundDB"));
+            var result = controller.Delete(999);
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public void DeleteConfirmed_ExistingItem_RedirectsToIndex()
+        {
+            var context = GetDbContext("DeleteConfirmedExistsDB");
+            var item = new ToDoItem { Titulo = "Borrar", EstaCompleto = false };
+            context.ToDoItems.Add(item);
+            context.SaveChanges();
+
             var controller = new ToDoItemController(context);
+            var result = controller.DeleteConfirmed(item.Id) as RedirectToActionResult;
 
-            var result = controller.Delete(123);
+            Assert.NotNull(result);
+            Assert.Equal("Index", result.ActionName);
+            Assert.Null(context.ToDoItems.Find(item.Id));
+        }
 
+        [Fact]
+        public void DeleteConfirmed_NonExistingItem_ReturnsNotFound()
+        {
+            var controller = new ToDoItemController(GetDbContext("DeleteConfirmedNotFoundDB"));
+            var result = controller.DeleteConfirmed(999);
             Assert.IsType<NotFoundResult>(result);
         }
     }
+
+
 }
